@@ -4,16 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/cnoe-io/idpbuilder/api/v1alpha1"
-	"github.com/cnoe-io/idpbuilder/pkg/build"
-	"github.com/cnoe-io/idpbuilder/pkg/k8s"
+	"github.com/cnoe-io/idpbuilder/pkg/cmd/helpers"
 	"github.com/cnoe-io/idpbuilder/pkg/printer"
 	"github.com/cnoe-io/idpbuilder/pkg/printer/types"
 	"github.com/cnoe-io/idpbuilder/pkg/util"
+	"github.com/cnoe-io/idpbuilder/pkg/util/idp"
 	"github.com/spf13/cobra"
 	"io"
-	"k8s.io/client-go/util/homedir"
 	"os"
-	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 )
@@ -29,23 +27,13 @@ var PackagesCmd = &cobra.Command{
 func getPackagesE(cmd *cobra.Command, args []string) error {
 	ctx, ctxCancel := context.WithCancel(cmd.Context())
 	defer ctxCancel()
-	kubeConfigPath := filepath.Join(homedir.HomeDir(), ".kube", "config")
 
-	opts := build.NewBuildOptions{
-		KubeConfigPath: kubeConfigPath,
-		Scheme:         k8s.GetScheme(),
-		CancelFunc:     ctxCancel,
-		TemplateData:   v1alpha1.BuildCustomizationSpec{},
-	}
-
-	b := build.NewBuild(opts)
-
-	kubeConfig, err := b.GetKubeConfig()
+	kubeConfig, err := helpers.GetKubeConfig()
 	if err != nil {
 		return fmt.Errorf("getting kube config: %w", err)
 	}
 
-	kubeClient, err := b.GetKubeClient(kubeConfig)
+	kubeClient, err := helpers.GetKubeClient(kubeConfig)
 	if err != nil {
 		return fmt.Errorf("getting kube client: %w", err)
 	}
@@ -64,10 +52,12 @@ func printPackages(ctx context.Context, outWriter io.Writer, kubeClient client.C
 		return fmt.Errorf("getting namespace: %w", err)
 	}
 
-	argocdBaseUrl, err := util.ArgocdBaseUrl(ctx)
+	config, err := idp.GetConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("Error creating argocd Url: %v\n", err)
+		return fmt.Errorf("getting idp config: %w", err)
 	}
+
+	argocdBaseUrl := util.ArgocdBaseUrl(config)
 
 	if len(packages) == 0 {
 		// Get all custom packages
