@@ -90,6 +90,11 @@ func (b *Build) ReconcileKindCluster(ctx context.Context, recreateCluster bool) 
 		return err
 	}
 
+	// Import images into Kind nodes, this currently ignores errors as it is an optimization and not critical
+	if err := cluster.ImportImages(ctx); err != nil {
+		setupLog.Error(err, "Error Importing Images")
+	}
+
 	// Create Kube Config for Kind cluster
 	if err := cluster.ExportKubeConfig(b.name, false); err != nil {
 		setupLog.Error(err, "Error exporting kubeconfig from kind cluster")
