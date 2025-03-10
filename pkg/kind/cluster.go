@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/cnoe-io/idpbuilder/pkg/build/coredns"
 	"github.com/cnoe-io/idpbuilder/pkg/controllers/localbuild"
 	"github.com/cnoe-io/idpbuilder/pkg/k8s"
 	"github.com/cnoe-io/idpbuilder/pkg/util"
@@ -205,10 +206,13 @@ func (c *Cluster) ImportImages(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	corednsObjects, err := k8s.BuildCustomizedObjects("", coredns.CoreDNSTemplatePath, coredns.Templates, scheme, c.cfg)
 	images := []string{}
 	images = append(images, k8s.ObjectsImages(argoObjects)...)
 	images = append(images, k8s.ObjectsImages(giteaObjects)...)
 	images = append(images, k8s.ObjectsImages(nginxObjects)...)
+	images = append(images, k8s.ObjectsImages(corednsObjects)...)
 	uniqueImages := []string{}
 	for _, i := range images {
 		p := strings.Split(i, "@sha256")
